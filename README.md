@@ -87,6 +87,14 @@ The engine avoids dynamic classes/XPath-first strategy and weights stable metada
 
 Threshold: `0.75`
 
+
+## Product UX Improvements
+
+- Added **Workflow Center** with workflow list, run/record/heal action cluster.
+- Added **completion popups** for config save, auth start/success, recording finish, workflow run status, heal scan, and approvals.
+- Added dedicated backend workflow listing endpoint: `GET /api/run/workflows`.
+- Fixed heal action to actively validate registry locators against live page and generate proposals when broken.
+
 ## Runtime Flow
 
 1. Record workflow (`/api/record/start`, `/api/record/stop`).
