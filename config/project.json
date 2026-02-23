@@ -1,0 +1,10 @@
+{
+  "baseUrl": "https://example.com/login",
+  "authMode": "auth",
+  "credentials": {
+    "username": "admin",
+    "password": "123"
+  },
+  "storageStatePath": "auth/storage.json",
+  "mode": "dev"
+}

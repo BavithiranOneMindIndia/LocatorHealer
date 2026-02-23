@@ -1,0 +1,11 @@
+{
+  "login_button": {
+    "primary": "getByRole('button', { name: 'Login' })",
+    "metadata": {
+      "tag": "button",
+      "text": "Login",
+      "role": "button"
+    },
+    "history": []
+  }
+}
