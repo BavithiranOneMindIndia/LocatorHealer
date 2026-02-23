@@ -1,7 +1,9 @@
 import { Router } from 'express';
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { extractLocatorRegistry, extractSmartActionLines } from '../core/locatorParser.js';
+import { saveRegistry } from '../core/locatorRegistry.js';
 import { SmartRunner } from '../core/smartRunner.js';
 import { pushActivity } from '../utils/activityStore.js';
 import { getActiveProjectId, projectPaths, readProjectConfig } from '../utils/projectStore.js';
@@ -10,6 +12,19 @@ const router = Router();
 
 async function resolveProjectId(raw?: string): Promise<string | null> {
   return raw || await getActiveProjectId();
+}
+
+async function normalizeRecordedWorkflowIfNeeded(projectId: string, workflowPath: string): Promise<{ normalized: boolean; actionSteps: number }> {
+  const script = await readFile(workflowPath, 'utf-8');
+  const looksLikeRecordedCodegenScript = script.includes('page.') && !script.includes('smart.click(');
+  if (!looksLikeRecordedCodegenScript) return { normalized: false, actionSteps: 0 };
+
+  const registry = extractLocatorRegistry(script);
+  await saveRegistry(projectId, registry);
+  const actionLines = extractSmartActionLines(script, registry);
+  const wrapped = `import type { SmartRunner } from '../../../backend/core/smartRunner.js';\n\nexport async function runWorkflow(smart: SmartRunner): Promise<void> {\n${actionLines.map((line) => `  ${line}`).join('\n')}\n}\n`;
+  await writeFile(workflowPath, wrapped, 'utf-8');
+  return { normalized: true, actionSteps: actionLines.length };
 }
 
 router.get('/workflows', async (req, res) => {
@@ -37,6 +52,16 @@ router.post('/', async (req, res) => {
   try {
     await smart.gotoBase();
     pushActivity({ ts: new Date().toISOString(), scope: 'run', message: 'Run started', details: { workflow: path.basename(workflowPath), projectId } });
+
+    const normalization = await normalizeRecordedWorkflowIfNeeded(projectId, workflowPath);
+    if (normalization.normalized) {
+      pushActivity({
+        ts: new Date().toISOString(),
+        scope: 'run',
+        message: 'Workflow auto-normalized before run',
+        details: { workflow: path.basename(workflowPath), projectId, actionSteps: normalization.actionSteps }
+      });
+    }
 
     const workflowModule = await import(`${pathToFileURL(workflowPath).href}?t=${Date.now()}`);
     if (typeof workflowModule.runWorkflow === 'function') {
