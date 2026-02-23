@@ -1,76 +1,105 @@
-# Locator Healer (Playwright + Express + React + TypeScript)
+# WhatsApp Self-Healing Playwright Framework
 
-A full-stack self-healing automation project implementing **Record → Store → Heal → Approve → Update Locator** with JSON persistence.
+A modular TypeScript framework for WhatsApp Web automation with:
 
-## What was improved
+- QR/OTP/manual authentication capture and reuse (`storageState`)
+- Playwright workflow recording
+- Locator registry + metadata persistence
+- Smart runner with self-heal engine
+- Manual approval before registry update
 
-- Fixed recording startup so it does **not rely on `npx` executable** (avoids `spawn npx ENOENT`).
-- Added robust **Auth Capture flow** for username/password, OTP, and QR-based auth (e.g., WhatsApp Web).
-- Added dedicated auth APIs to start auth browser, check status, save storage state, and cancel.
-- Improved UI with a clearer product-style layout and auth status/toast messages.
+## Architecture
 
-## Features
-
-- Project setup with `baseUrl`, auth mode, `storageStatePath`, and run `mode` (`dev` / `ci`).
-- Extended auth config supports:
-  - username/password
-  - OTP
-  - QR flow
-  - success URL/selector detection
-- Recording module using Playwright codegen and automatic locator metadata extraction.
-- Smart runner API: `await smart.click('element_key')`.
-- Healing engine with similarity scoring and risk classification.
-- Manual approval flow for locator updates.
-- URL navigation healing proposal when base URL fails.
+```text
+Frontend UI
+  ↓
+Backend API (Express)
+  ↓
+Smart Runner (Playwright wrapper)
+  ↓
+Healing Engine (metadata similarity)
+  ↓
+Locator Registry / Proposed changes
+  ↓
+Auth Storage State
+```
 
 ## Folder Structure
 
 ```text
 backend/
   server.ts
-  smartRunner.ts
-  healingEngine.ts
-  locatorParser.ts
-  logger.ts
-  storage.ts
-  types.ts
+  routes/
+    configRoutes.ts
+    recordRoutes.ts
+    runRoutes.ts
+    healRoutes.ts
+    approvalRoutes.ts
+    authRoutes.ts
+  core/
+    smartRunner.ts
+    healingEngine.ts
+    locatorRegistry.ts
+    domAnalyzer.ts
+    similarityEngine.ts
+    riskClassifier.ts
+    locatorParser.ts
+  auth/
+    authManager.ts
+    storageState.json
+  utils/
+    logger.ts
+    fileManager.ts
 frontend/
   App.tsx
-  main.tsx
-config/project.json
-locators/registry.json
-locators/proposed_changes.json
-scripts/workflow.spec.ts
-auth/storage.json
+  components/
+    ConfigPage.tsx
+    Recorder.tsx
+    HealDashboard.tsx
+    LocatorViewer.tsx
+locators/
+  registry.json
+  proposed_changes.json
+scripts/
+  workflow.spec.ts
+config/
+  project.json
 ```
 
-## Auth Capture Workflow (for QR login products like WhatsApp)
+## WhatsApp QR Auth Flow
 
-1. Set `authMode=auth` and configure auth fields in UI.
-2. Click **Save Config**.
-3. Click **Start Auth Capture** (headed browser opens).
-4. Complete login manually (username/password/OTP/QR scan).
-5. Click **Check Auth Status** until authenticated is detected.
-6. Click **Save Auth State**.
-7. UI shows success popup: auth saved; proceed to recording.
+1. Open UI and configure `https://web.whatsapp.com/`.
+2. Click **Scan QR / Start Auth**.
+3. In opened browser, complete QR scan/login/OTP.
+4. Click **Check Auth Status**.
+5. Once authenticated, click **Save Auth**.
+6. Storage state is saved to `backend/auth/storageState.json`.
 
-## Run
+## Healing Strategy (WhatsApp-friendly)
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Start backend:
-   ```bash
-   npm run dev:backend
-   ```
-3. Start frontend:
-   ```bash
-   npm run dev:frontend
-   ```
-4. Open frontend: `http://localhost:5173`
+The engine avoids dynamic classes/XPath-first strategy and weights stable metadata:
 
-## Dev vs CI mode
+- Role match: `0.25`
+- Aria-label similarity: `0.30`
+- Inner text similarity: `0.20`
+- Tag match: `0.15`
+- DOM depth proximity: `0.10`
 
-- `dev`: auto-approve only `LOW` risk + validated heal proposals.
-- `ci`: always requires manual approval.
+Threshold: `0.75`
+
+## Runtime Flow
+
+1. Record workflow (`/api/record/start`, `/api/record/stop`).
+2. Store parsed locators in `locators/registry.json`.
+3. Run workflow (`/api/run`).
+4. On failure, heal proposal generated in `locators/proposed_changes.json`.
+5. Approve/reject in UI (`/api/approve`).
+6. Approved locator updates registry and old locator moves to `history[]`.
+
+## Scripts
+
+```bash
+npm install
+npm run dev:backend
+npm run dev:frontend
+```

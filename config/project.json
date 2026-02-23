@@ -10,6 +10,6 @@
     "successUrlIncludes": "web.whatsapp.com",
     "successSelector": "[data-testid=\"chat-list\"]"
   },
-  "storageStatePath": "auth/storage.json",
+  "storageStatePath": "backend/auth/storageState.json",
   "mode": "dev"
 }

@@ -18,46 +18,17 @@ export interface AuthConfig {
 export interface ProjectConfig {
   baseUrl: string;
   authMode: AuthMode;
+  mode: RunMode;
   auth?: AuthConfig;
   storageStatePath: string;
-  mode: RunMode;
 }
-
-export interface LocatorMetadata {
-  tag?: string;
-  role?: string;
-  text?: string;
-  ariaLabel?: string;
-  domDepth?: number;
-  attrs?: Record<string, string>;
-}
-
-export interface LocatorEntry {
-  primary: string;
-  metadata: LocatorMetadata;
-  history: string[];
-}
-
-export type LocatorRegistry = Record<string, LocatorEntry>;
 
 export interface HealProposal {
   elementKey: string;
   oldLocator: string;
   proposedLocator: string;
   similarity: number;
-  risk: 'LOW' | 'MEDIUM' | 'HIGH';
+  risk: string;
   validated: boolean;
   approved: boolean;
-  reason?: string;
-}
-
-export interface DOMCandidate {
-  tag: string;
-  role: string;
-  text: string;
-  ariaLabel: string;
-  testId: string;
-  id: string;
-  domDepth: number;
-  index: number;
 }

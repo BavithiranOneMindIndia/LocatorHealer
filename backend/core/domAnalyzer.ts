@@ -1,0 +1,29 @@
+import type { Page } from 'playwright';
+import type { DOMCandidate } from '../types.js';
+
+export async function collectDOMCandidates(page: Page): Promise<DOMCandidate[]> {
+  return page.evaluate(() => {
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>('body *'));
+
+    const getDepth = (el: HTMLElement): number => {
+      let depth = 0;
+      let cur: HTMLElement | null = el;
+      while (cur?.parentElement) {
+        depth += 1;
+        cur = cur.parentElement;
+      }
+      return depth;
+    };
+
+    return nodes.map((el, index) => ({
+      tag: el.tagName.toLowerCase(),
+      role: el.getAttribute('role') ?? '',
+      text: (el.innerText || el.textContent || '').trim().slice(0, 120),
+      ariaLabel: el.getAttribute('aria-label') ?? '',
+      testId: el.getAttribute('data-testid') ?? '',
+      id: el.id ?? '',
+      domDepth: getDepth(el),
+      index
+    }));
+  });
+}

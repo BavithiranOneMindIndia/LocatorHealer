@@ -1,5 +1,5 @@
-import type { SmartRunner } from '../backend/smartRunner.js';
+import type { SmartRunner } from '../backend/core/smartRunner.js';
 
 export async function runWorkflow(smart: SmartRunner): Promise<void> {
-  await smart.click('login_button');
+  await smart.click('search_input');
 }
