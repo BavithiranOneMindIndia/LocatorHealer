@@ -95,6 +95,15 @@ Threshold: `0.75`
 - Added dedicated backend workflow listing endpoint: `GET /api/run/workflows`.
 - Fixed heal action to actively validate registry locators against live page and generate proposals when broken.
 
+
+## Debug Visibility + Multi-workflow
+
+- `POST /api/run` now returns backend action trace in response.
+- `POST /api/heal/scan` now returns detailed checks per locator (`healthy`, `broken`, `proposed`) and backend action trace.
+- Added `GET /api/activity` to inspect backend run/heal/record events in UI.
+- Recording supports target workflow name; multiple `*.spec.ts` files can be managed and selected from Workflow Center.
+- Recorded scripts are normalized into pure `SmartRunner` workflow files (no `@playwright/test` import), fixing runtime import errors.
+
 ## Runtime Flow
 
 1. Record workflow (`/api/record/start`, `/api/record/stop`).

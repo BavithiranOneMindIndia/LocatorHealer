@@ -5,6 +5,7 @@ import type { LocatorRegistry, ProjectConfig } from '../types.js';
 import { addProposal, getProposals, getRegistry } from '../core/locatorRegistry.js';
 import { healLocator, toLocator } from '../core/healingEngine.js';
 import { readJson } from '../utils/fileManager.js';
+import { pushActivity } from '../utils/activityStore.js';
 
 const router = Router();
 const configPath = path.resolve('config/project.json');
@@ -29,27 +30,34 @@ router.post('/scan', async (_req, res) => {
   const page = await context.newPage();
 
   let healed = 0;
-  const checked: string[] = [];
+  const details: Array<{ key: string; status: 'healthy' | 'broken' | 'proposed'; similarity?: number }> = [];
 
   try {
     await page.goto(config.baseUrl, { waitUntil: 'domcontentloaded' });
+    pushActivity({ ts: new Date().toISOString(), scope: 'heal', message: 'Heal scan started' });
 
     for (const [key, entry] of Object.entries(registry as LocatorRegistry)) {
-      checked.push(key);
       const visible = await toLocator(page, entry.primary).first().isVisible().catch(() => false);
-      if (visible) continue;
+      if (visible) {
+        details.push({ key, status: 'healthy' });
+        continue;
+      }
 
+      details.push({ key, status: 'broken' });
       const proposal = await healLocator(page, key, entry);
       if (proposal) {
         await addProposal(proposal);
         healed += 1;
+        details.push({ key, status: 'proposed', similarity: proposal.similarity });
       }
     }
 
     const proposals = await getProposals();
-    res.json({ ok: true, checked: checked.length, healed, proposals });
+    pushActivity({ ts: new Date().toISOString(), scope: 'heal', message: 'Heal scan completed', details: { checked: details.length, healed } });
+    res.json({ ok: true, checked: Object.keys(registry).length, healed, details, proposals, backendActions: ['loadRegistry', 'validateLocator', 'healBroken', 'saveProposals'] });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message, checked: checked.length, healed });
+    pushActivity({ ts: new Date().toISOString(), scope: 'heal', message: 'Heal scan failed', details: { error: (error as Error).message } });
+    res.status(500).json({ error: (error as Error).message, checked: details.length, healed, details });
   } finally {
     await context.close();
     await browser.close();

@@ -48,3 +48,13 @@ export function transformScriptToSmartCalls(script: string): string {
     return `await smart.click('${key}');`;
   });
 }
+
+
+export function extractSmartClickLines(script: string): string[] {
+  const smartified = transformScriptToSmartCalls(script);
+  const lines = smartified
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith("await smart.click('") && l.endsWith(");"));
+  return [...new Set(lines)];
+}

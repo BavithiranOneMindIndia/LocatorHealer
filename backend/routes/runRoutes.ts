@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import type { ProjectConfig } from '../types.js';
 import { SmartRunner } from '../core/smartRunner.js';
 import { readJson } from '../utils/fileManager.js';
+import { pushActivity } from '../utils/activityStore.js';
 
 const router = Router();
 const configPath = path.resolve('config/project.json');
@@ -30,15 +31,20 @@ router.post('/', async (req, res) => {
   try {
     await smart.gotoBase();
     const selectedPath = workflowName.endsWith('.spec.ts') ? workflowPath : defaultWorkflowPath;
+    pushActivity({ ts: new Date().toISOString(), scope: 'run', message: 'Run started', details: { workflow: path.basename(selectedPath) } });
+
     const workflowModule = await import(`${pathToFileURL(selectedPath).href}?t=${Date.now()}`);
     if (typeof workflowModule.runWorkflow === 'function') {
       await workflowModule.runWorkflow(smart);
     }
+
     await smart.close();
-    res.json({ ok: true, workflow: path.basename(selectedPath), message: 'Workflow completed successfully.' });
+    pushActivity({ ts: new Date().toISOString(), scope: 'run', message: 'Run completed', details: { workflow: path.basename(selectedPath) } });
+    res.json({ ok: true, workflow: path.basename(selectedPath), message: 'Workflow completed successfully.', backendActions: ['gotoBase', 'runWorkflow', 'close'] });
   } catch (error) {
     await smart.close();
-    res.status(500).json({ error: (error as Error).message, workflow: workflowName });
+    pushActivity({ ts: new Date().toISOString(), scope: 'run', message: 'Run failed', details: { workflow: workflowName, error: (error as Error).message } });
+    res.status(500).json({ error: (error as Error).message, workflow: workflowName, backendActions: ['gotoBase', 'runWorkflow', 'error'] });
   }
 });
 

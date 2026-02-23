@@ -10,6 +10,7 @@ import authRoutes from './routes/authRoutes.js';
 import { readJson } from './utils/fileManager.js';
 import type { ProjectConfig } from './types.js';
 import { getProposals, getRegistry } from './core/locatorRegistry.js';
+import { getActivity } from './utils/activityStore.js';
 
 const app = express();
 app.use(cors());
@@ -23,6 +24,11 @@ app.use('/api/run', runRoutes);
 app.use('/api/heal', healRoutes);
 app.use('/api/approve', approvalRoutes);
 app.use('/api/auth', authRoutes);
+
+
+app.get('/api/activity', (_req, res) => {
+  res.json({ events: getActivity() });
+});
 
 app.get('/api/state', async (_req, res) => {
   const config = await readJson<ProjectConfig | null>(configPath, null);
