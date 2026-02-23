@@ -65,7 +65,7 @@ router.post('/stop', async (_req, res) => {
   const registry = extractLocatorRegistry(script);
   await saveRegistry(currentProjectId, registry);
 
-  const clickLines = extractSmartClickLines(script);
+  const clickLines = extractSmartClickLines(script, registry);
   const wrapped = `import type { SmartRunner } from '../../../backend/core/smartRunner.js';\n\nexport async function runWorkflow(smart: SmartRunner): Promise<void> {\n${clickLines.map((l) => `  ${l}`).join('\n')}\n}\n`;
   await writeFile(filePath, wrapped, 'utf-8');
 

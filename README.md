@@ -105,6 +105,11 @@ Threshold: `0.75`
 - Fixed heal action to actively validate registry locators against live page and generate proposals when broken.
 
 
+
+### Locator key mismatch fix
+
+Recorder now maps `page.<locator>().click()` calls back to the exact registry `primary` locator string before generating `smart.click('<key>')`. This avoids generic keys like `button`, `textbox`, `main` that caused `Unknown locator key` runtime errors.
+
 ## Debug Visibility + Multi-workflow
 
 - `POST /api/run` now returns backend action trace in response.

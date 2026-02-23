@@ -41,20 +41,38 @@ export function extractLocatorRegistry(scriptContents: string): LocatorRegistry 
   return registry;
 }
 
-export function transformScriptToSmartCalls(script: string): string {
-  return script.replace(/await\s+page\.(?:getByRole|getByText|getByLabel|locator)\([^\n]+?\.click\(\);/g, (line) => {
-    const call = line.match(/page\.(?:getByRole|getByText|getByLabel|locator)\((.+?)\)\.click\(\)/);
-    const key = normalizeKey(call?.[1]?.match(/'([^']+)'/)?.[1] ?? 'element');
-    return `await smart.click('${key}');`;
-  });
+function extractClickedLocatorCalls(script: string): string[] {
+  const lines = script.split('\n');
+  const calls: string[] = [];
+
+  for (const line of lines) {
+    const clickMatch = line.match(/page\.(getByRole|getByText|getByLabel|locator)\((.+?)\)\.click\(\)/);
+    if (!clickMatch) continue;
+    calls.push(`${clickMatch[1]}(${clickMatch[2]})`);
+  }
+
+  return calls;
 }
 
+export function extractSmartClickLines(script: string, registry: LocatorRegistry): string[] {
+  const primaryToKey = new Map<string, string>();
+  Object.entries(registry).forEach(([key, entry]) => {
+    primaryToKey.set(entry.primary, key);
+  });
 
-export function extractSmartClickLines(script: string): string[] {
-  const smartified = transformScriptToSmartCalls(script);
-  const lines = smartified
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith("await smart.click('") && l.endsWith(");"));
+  const lines: string[] = [];
+  for (const call of extractClickedLocatorCalls(script)) {
+    const key = primaryToKey.get(call);
+    if (key) {
+      lines.push(`await smart.click('${key}');`);
+      continue;
+    }
+
+    const fallbackKey = normalizeKey(call.match(/name:\s*'([^']+)'|getByText\('([^']+)'|getByLabel\('([^']+)'|locator\('#([^']+)'/)?.slice(1).find(Boolean) ?? call);
+    if (registry[fallbackKey]) {
+      lines.push(`await smart.click('${fallbackKey}');`);
+    }
+  }
+
   return [...new Set(lines)];
 }
