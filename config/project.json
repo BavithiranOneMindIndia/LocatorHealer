@@ -1,9 +1,14 @@
 {
-  "baseUrl": "https://example.com/login",
+  "baseUrl": "https://web.whatsapp.com/",
   "authMode": "auth",
-  "credentials": {
-    "username": "admin",
-    "password": "123"
+  "auth": {
+    "username": "",
+    "password": "",
+    "otp": "",
+    "qrEnabled": true,
+    "loginUrl": "https://web.whatsapp.com/",
+    "successUrlIncludes": "web.whatsapp.com",
+    "successSelector": "[data-testid=\"chat-list\"]"
   },
   "storageStatePath": "auth/storage.json",
   "mode": "dev"
