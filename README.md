@@ -66,6 +66,15 @@ config/
   project.json
 ```
 
+
+## Software-style Project Workflow
+
+- Create project from **Project Creation** page.
+- Select/open project to enter workflow page.
+- Create multiple workflows per project (named `*.spec.ts`).
+- Record/run/heal are scoped to selected project and workflow.
+- Heal details section shows per-step status (`healthy`, `broken`, `proposed`).
+
 ## WhatsApp QR Auth Flow
 
 1. Open UI and configure `https://web.whatsapp.com/`.

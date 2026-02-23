@@ -1,35 +1,36 @@
-import path from 'node:path';
 import type { HealProposal, LocatorRegistry } from '../types.js';
 import { readJson, writeJson } from '../utils/fileManager.js';
+import { projectPaths } from '../utils/projectStore.js';
 
-const registryPath = path.resolve('locators/registry.json');
-const proposalPath = path.resolve('locators/proposed_changes.json');
-
-export async function getRegistry(): Promise<LocatorRegistry> {
-  return readJson<LocatorRegistry>(registryPath, {});
+function paths(projectId: string) {
+  return projectPaths(projectId);
 }
 
-export async function saveRegistry(registry: LocatorRegistry): Promise<void> {
-  await writeJson(registryPath, registry);
+export async function getRegistry(projectId: string): Promise<LocatorRegistry> {
+  return readJson<LocatorRegistry>(paths(projectId).registry, {});
 }
 
-export async function getProposals(): Promise<HealProposal[]> {
-  return readJson<HealProposal[]>(proposalPath, []);
+export async function saveRegistry(projectId: string, registry: LocatorRegistry): Promise<void> {
+  await writeJson(paths(projectId).registry, registry);
 }
 
-export async function saveProposals(proposals: HealProposal[]): Promise<void> {
-  await writeJson(proposalPath, proposals);
+export async function getProposals(projectId: string): Promise<HealProposal[]> {
+  return readJson<HealProposal[]>(paths(projectId).proposals, []);
 }
 
-export async function addProposal(proposal: HealProposal): Promise<void> {
-  const proposals = await getProposals();
+export async function saveProposals(projectId: string, proposals: HealProposal[]): Promise<void> {
+  await writeJson(paths(projectId).proposals, proposals);
+}
+
+export async function addProposal(projectId: string, proposal: HealProposal): Promise<void> {
+  const proposals = await getProposals(projectId);
   proposals.push(proposal);
-  await saveProposals(proposals);
+  await saveProposals(projectId, proposals);
 }
 
-export async function approveProposal(elementKey: string, approved: boolean): Promise<void> {
-  const proposals = await getProposals();
-  const registry = await getRegistry();
+export async function approveProposal(projectId: string, elementKey: string, approved: boolean): Promise<void> {
+  const proposals = await getProposals(projectId);
+  const registry = await getRegistry(projectId);
   const idx = proposals.findIndex((p) => p.elementKey === elementKey && !p.approved);
   if (idx < 0) return;
 
@@ -40,8 +41,8 @@ export async function approveProposal(elementKey: string, approved: boolean): Pr
     registry[elementKey].history.push(registry[elementKey].primary);
     registry[elementKey].primary = proposal.proposedLocator;
     proposals.splice(idx, 1);
-    await saveRegistry(registry);
+    await saveRegistry(projectId, registry);
   }
 
-  await saveProposals(proposals);
+  await saveProposals(projectId, proposals);
 }

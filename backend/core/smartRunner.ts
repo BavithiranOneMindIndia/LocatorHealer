@@ -9,7 +9,7 @@ export class SmartRunner {
   public page!: Page;
   private registry: LocatorRegistry = {};
 
-  constructor(private readonly config: ProjectConfig) {}
+  constructor(private readonly config: ProjectConfig, private readonly projectId: string) {}
 
   async init(): Promise<void> {
     this.browser = await chromium.launch({ headless: true });
@@ -17,7 +17,7 @@ export class SmartRunner {
       this.config.authMode === 'auth' ? { storageState: this.config.storageStatePath } : {}
     );
     this.page = await this.context.newPage();
-    this.registry = await getRegistry();
+    this.registry = await getRegistry(this.projectId);
   }
 
   async gotoBase(): Promise<void> {
@@ -38,7 +38,7 @@ export class SmartRunner {
           approved: false,
           reason: 'Navigation failed on configured base URL'
         };
-        await addProposal(navProposal);
+        await addProposal(this.projectId, navProposal);
         throw new Error('Navigation failed; proposal created for base URL heal.');
       }
     }
@@ -54,10 +54,10 @@ export class SmartRunner {
       const proposal = await healLocator(this.page, key, entry);
       if (!proposal) throw new Error(`Healing failed for ${key}`);
 
-      await addProposal(proposal);
+      await addProposal(this.projectId, proposal);
 
       if (this.config.mode === 'dev' && proposal.risk === 'LOW' && proposal.validated) {
-        await approveProposal(key, true);
+        await approveProposal(this.projectId, key, true);
         await toLocator(this.page, proposal.proposedLocator).click();
       } else {
         throw new Error(`Locator broken: healing proposal created for ${key}. Manual approval required.`);
@@ -66,7 +66,7 @@ export class SmartRunner {
   }
 
   async applyApproval(elementKey: string, approved: boolean): Promise<void> {
-    await approveProposal(elementKey, approved);
+    await approveProposal(this.projectId, elementKey, approved);
   }
 
   async close(): Promise<void> {

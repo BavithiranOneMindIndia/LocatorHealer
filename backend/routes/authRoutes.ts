@@ -1,16 +1,20 @@
 import { Router } from 'express';
-import path from 'node:path';
-import type { ProjectConfig } from '../types.js';
 import { closeAuthSession, detectAuthSuccess, persistAuth, startAuthSession, type AuthSession } from '../auth/authManager.js';
-import { readJson } from '../utils/fileManager.js';
+import { getActiveProjectId, readProjectConfig } from '../utils/projectStore.js';
 import { logAudit } from '../utils/logger.js';
 
 const router = Router();
-const configPath = path.resolve('config/project.json');
 let authSession: AuthSession | null = null;
 
-router.post('/start', async (_req, res) => {
-  const config = await readJson<ProjectConfig | null>(configPath, null);
+async function resolveProjectId(raw?: string): Promise<string | null> {
+  return raw || await getActiveProjectId();
+}
+
+router.post('/start', async (req, res) => {
+  const projectId = await resolveProjectId(typeof req.body?.projectId === 'string' ? req.body.projectId : undefined);
+  if (!projectId) return res.status(400).json({ error: 'No active project selected' });
+
+  const config = await readProjectConfig(projectId);
   if (!config || config.authMode !== 'auth') {
     return res.status(400).json({ error: 'Auth mode not enabled' });
   }
@@ -20,10 +24,13 @@ router.post('/start', async (_req, res) => {
   res.json({ ok: true, message: 'Auth browser opened. Complete QR/OTP/login and then check status.' });
 });
 
-router.get('/status', async (_req, res) => {
+router.get('/status', async (req, res) => {
   if (!authSession) return res.json({ active: false, authenticated: false, message: 'No active auth session.' });
 
-  const config = await readJson<ProjectConfig | null>(configPath, null);
+  const projectId = await resolveProjectId(typeof req.query.projectId === 'string' ? req.query.projectId : undefined);
+  if (!projectId) return res.status(400).json({ error: 'No active project selected' });
+
+  const config = await readProjectConfig(projectId);
   const authenticated = await detectAuthSuccess(authSession, config?.auth);
   res.json({
     active: true,
@@ -34,16 +41,19 @@ router.get('/status', async (_req, res) => {
   });
 });
 
-router.post('/save', async (_req, res) => {
+router.post('/save', async (req, res) => {
   if (!authSession) return res.status(400).json({ error: 'No active auth session.' });
-  const config = await readJson<ProjectConfig | null>(configPath, null);
+  const projectId = await resolveProjectId(typeof req.body?.projectId === 'string' ? req.body.projectId : undefined);
+  if (!projectId) return res.status(400).json({ error: 'No active project selected' });
+
+  const config = await readProjectConfig(projectId);
   if (!config) return res.status(400).json({ error: 'Missing project config.' });
 
   await persistAuth(authSession, config.storageStatePath);
   await closeAuthSession(authSession);
   authSession = null;
 
-  logAudit('auth.saved', { storageStatePath: config.storageStatePath });
+  logAudit('auth.saved', { storageStatePath: config.storageStatePath, projectId });
   res.json({ ok: true, message: 'Auth saved and reusable for future workflow runs.' });
 });
 

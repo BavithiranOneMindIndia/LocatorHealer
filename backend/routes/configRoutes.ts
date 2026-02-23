@@ -1,19 +1,27 @@
 import { Router } from 'express';
-import path from 'node:path';
 import type { ProjectConfig } from '../types.js';
-import { readJson, writeJson } from '../utils/fileManager.js';
+import { getActiveProjectId, readProjectConfig, saveProjectConfig } from '../utils/projectStore.js';
 
 const router = Router();
-const configPath = path.resolve('config/project.json');
 
-router.get('/', async (_req, res) => {
-  const config = await readJson<ProjectConfig | null>(configPath, null);
-  res.json({ config });
+async function resolveProjectId(raw?: string): Promise<string | null> {
+  return raw || await getActiveProjectId();
+}
+
+router.get('/', async (req, res) => {
+  const projectId = await resolveProjectId(typeof req.query.projectId === 'string' ? req.query.projectId : undefined);
+  if (!projectId) return res.status(400).json({ error: 'No active project selected' });
+
+  const config = await readProjectConfig(projectId);
+  res.json({ projectId, config });
 });
 
 router.post('/', async (req, res) => {
-  await writeJson(configPath, req.body as ProjectConfig);
-  res.json({ ok: true });
+  const projectId = await resolveProjectId(typeof req.body?.projectId === 'string' ? req.body.projectId : undefined);
+  if (!projectId) return res.status(400).json({ error: 'No active project selected' });
+
+  await saveProjectConfig(projectId, req.body.config as ProjectConfig);
+  res.json({ ok: true, projectId });
 });
 
 export default router;
