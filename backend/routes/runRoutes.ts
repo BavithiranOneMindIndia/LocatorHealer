@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { extractLocatorRegistry, extractSmartActionLines } from '../core/locatorParser.js';
+import { extractLocatorRegistry, extractSmartClickLines } from '../core/locatorParser.js';
 import { saveRegistry } from '../core/locatorRegistry.js';
 import { SmartRunner } from '../core/smartRunner.js';
 import { pushActivity } from '../utils/activityStore.js';
@@ -21,7 +21,7 @@ async function normalizeRecordedWorkflowIfNeeded(projectId: string, workflowPath
 
   const registry = extractLocatorRegistry(script);
   await saveRegistry(projectId, registry);
-  const actionLines = extractSmartActionLines(script, registry);
+  const actionLines = extractSmartClickLines(script, registry);
   const wrapped = `import type { SmartRunner } from '../../../backend/core/smartRunner.js';\n\nexport async function runWorkflow(smart: SmartRunner): Promise<void> {\n${actionLines.map((line) => `  ${line}`).join('\n')}\n}\n`;
   await writeFile(workflowPath, wrapped, 'utf-8');
   return { normalized: true, actionSteps: actionLines.length };
