@@ -2,7 +2,7 @@ import { Router } from 'express';
 import path from 'node:path';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
-import { extractLocatorRegistry, extractSmartClickLines } from '../core/locatorParser.js';
+import { extractLocatorRegistry, extractSmartActionLines } from '../core/locatorParser.js';
 import { saveRegistry } from '../core/locatorRegistry.js';
 import { logAudit } from '../utils/logger.js';
 import { pushActivity } from '../utils/activityStore.js';
@@ -65,18 +65,18 @@ router.post('/stop', async (_req, res) => {
   const registry = extractLocatorRegistry(script);
   await saveRegistry(currentProjectId, registry);
 
-  const clickLines = extractSmartClickLines(script, registry);
-  const wrapped = `import type { SmartRunner } from '../../../backend/core/smartRunner.js';\n\nexport async function runWorkflow(smart: SmartRunner): Promise<void> {\n${clickLines.map((l) => `  ${l}`).join('\n')}\n}\n`;
+  const actionLines = extractSmartActionLines(script, registry);
+  const wrapped = `import type { SmartRunner } from '../../../backend/core/smartRunner.js';\n\nexport async function runWorkflow(smart: SmartRunner): Promise<void> {\n${actionLines.map((l) => `  ${l}`).join('\n')}\n}\n`;
   await writeFile(filePath, wrapped, 'utf-8');
 
   pushActivity({
     ts: new Date().toISOString(),
     scope: 'record',
     message: 'Recording stopped and workflow normalized',
-    details: { projectId: currentProjectId, workflow: currentWorkflowName, clickSteps: clickLines.length, registrySize: Object.keys(registry).length }
+    details: { projectId: currentProjectId, workflow: currentWorkflowName, actionSteps: actionLines.length, registrySize: Object.keys(registry).length }
   });
 
-  res.json({ ok: true, workflow: currentWorkflowName, clickSteps: clickLines.length, registrySize: Object.keys(registry).length });
+  res.json({ ok: true, workflow: currentWorkflowName, actionSteps: actionLines.length, registrySize: Object.keys(registry).length });
 });
 
 export default router;

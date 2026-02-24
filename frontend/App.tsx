@@ -163,7 +163,7 @@ export function App() {
                 const r = await api('/api/record/stop', { method: 'POST' });
                 await refresh();
                 setSelectedWorkflow(r.workflow ?? selectedWorkflow);
-                openModal('Recording Completed', `Workflow: ${r.workflow ?? ''}, Steps: ${r.clickSteps ?? 0}, Locators: ${r.registrySize ?? 0}.`);
+                openModal('Recording Completed', `Workflow: ${r.workflow ?? ''}, Steps: ${r.actionSteps ?? r.clickSteps ?? 0}, Locators: ${r.registrySize ?? 0}.`);
               }}
               onRun={async () => {
                 const r = await api('/api/run', { method: 'POST', body: JSON.stringify({ projectId: activeProjectId, workflow: selectedWorkflow }) });

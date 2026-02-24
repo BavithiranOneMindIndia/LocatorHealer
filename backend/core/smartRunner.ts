@@ -65,6 +65,34 @@ export class SmartRunner {
     }
   }
 
+  async fill(key: string, value: string): Promise<void> {
+    const entry = this.registry[key];
+    if (!entry) throw new Error(`Unknown locator key: ${key}`);
+
+    try {
+      await toLocator(this.page, entry.primary).fill(value, { timeout: 2500 });
+    } catch {
+      const proposal = await healLocator(this.page, key, entry);
+      if (!proposal) throw new Error(`Healing failed for ${key}`);
+      await addProposal(this.projectId, proposal);
+      throw new Error(`Locator broken: healing proposal created for ${key}. Manual approval required.`);
+    }
+  }
+
+  async press(key: string, value: string): Promise<void> {
+    const entry = this.registry[key];
+    if (!entry) throw new Error(`Unknown locator key: ${key}`);
+
+    try {
+      await toLocator(this.page, entry.primary).press(value, { timeout: 2500 });
+    } catch {
+      const proposal = await healLocator(this.page, key, entry);
+      if (!proposal) throw new Error(`Healing failed for ${key}`);
+      await addProposal(this.projectId, proposal);
+      throw new Error(`Locator broken: healing proposal created for ${key}. Manual approval required.`);
+    }
+  }
+
   async applyApproval(elementKey: string, approved: boolean): Promise<void> {
     await approveProposal(this.projectId, elementKey, approved);
   }
