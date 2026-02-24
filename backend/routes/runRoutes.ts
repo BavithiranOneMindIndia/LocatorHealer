@@ -21,7 +21,13 @@ async function normalizeRecordedWorkflowIfNeeded(projectId: string, workflowPath
 
   const registry = extractLocatorRegistry(script);
   await saveRegistry(projectId, registry);
-  const actionLines = extractSmartClickLines(script, registry);
+  const extracted = extractSmartClickLines(script, registry);
+  const actionLines = Array.isArray(extracted) ? extracted : [];
+
+  if (actionLines.length === 0) {
+    throw new Error('Workflow normalization produced 0 executable steps. Please re-record this workflow.');
+  }
+
   const wrapped = `import type { SmartRunner } from '../../../backend/core/smartRunner.js';\n\nexport async function runWorkflow(smart: SmartRunner): Promise<void> {\n${actionLines.map((line) => `  ${line}`).join('\n')}\n}\n`;
   await writeFile(workflowPath, wrapped, 'utf-8');
   return { normalized: true, actionSteps: actionLines.length };
